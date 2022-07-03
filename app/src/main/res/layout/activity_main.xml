@@ -37,9 +37,10 @@
         app:layout_constraintTop_toBottomOf="@+id/statusHeader"
         app:layout_constraintEnd_toEndOf="parent"
         app:srcCompat="@drawable/nc"
+        android:background="@drawable/image_frame"
         />
 
-    
+
 
 
 
