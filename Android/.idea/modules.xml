@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/FreshPots.iml" filepath="$PROJECT_DIR$/.idea/modules/FreshPots.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/FreshPots.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/FreshPots.app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/FreshPots.app.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/FreshPots.app.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/FreshPots.app.main.iml" filepath="$PROJECT_DIR$/.idea/modules/app/FreshPots.app.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/FreshPots.app.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/FreshPots.app.unitTest.iml" />
+    </modules>
+  </component>
+</project>

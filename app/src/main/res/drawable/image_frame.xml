@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <solid android:color="@color/white" />
-    <stroke android:width="@dimen/image_frame_size" android:color="@color/black" />
-    <padding android:left="@dimen/image_frame_size"
-        android:top="@dimen/image_frame_size"
-        android:right="@dimen/image_frame_size"
-        android:bottom="@dimen/image_frame_size" />
-</shape>
