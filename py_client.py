@@ -50,5 +50,5 @@ class ArduConn:
                 print(chr(msg[0]))
                 
                 for i in range(1, len(msg), 2):
-                    print(int.from_bytes(msg[i:max(i+1,len(msg))], byteorder='big', signed=False))
+                    print(int.from_bytes(msg[i:min(i+2,len(msg))], byteorder='big', signed=False))
 
