@@ -14,11 +14,12 @@
 
 #define POT_RELAY_PIN 10
 
-#define STATE_OFF           0
-#define STATE_BREWING       1
-#define STATE_DELAYING      2
-#define STATE_WARMING       3
-#define STATE_FULL_SCHEDULE 4
+#define STATE_OFF               0
+#define STATE_BREWING           1
+#define STATE_DELAYING          2
+#define STATE_WARMING           3
+#define STATE_SCHEDULED_WAITING 4
+#define STATE_SCHEDULED_BREWING 5
 int potState = STATE_OFF;
 
 char wifiNetworkSsid[] = SECRET_SSID;
@@ -31,7 +32,10 @@ WiFiUDP udp;
 MDNS mdns(udp);
 WiFiServer server(80);
 WiFiClient client;
-Timer<1> timer;
+
+Timer<2> timer;
+// # seconds to warm after starting to brew.
+uint16_t schedWarmTimerSecs = 0;
 
 void setup() {
   // put your setup code here, to run once:
@@ -84,19 +88,21 @@ void loop() {
  *        ['D',{1},{2}] where [{1},{2}] is read as a uint16_t, {1} is most significant byte.
  * 'W'    Turn on a warming timer: aka, delay n seconds to stop brewing.
  *        Similar to the format for 'D'
- *        ['W',{1},{2}] where [{1},{2}] is read as a uint16_t
+ *        ['W',{1},{2}] where [{1},{2}] is read as a size_t
  * 'C'    Turn on a brewing timer, then a warming timer. Format: ['W',{1},{2},{3},{4}]
  *        Where [{1},{2}] is the brewing timer starting now, and [{3},{4}] is the warming timer
  *        starting not now but once the brew delay expires and brewing has started.
  * 'M'    Request pot status. Format: ['M'].
- *        On this command, write back to the client [{X}[,{1},{2}]]
- *        where 'R' is the response start character, and inclusion of [,{1},{2}] depends on case.
+ *        On this command, write back to the client [{X}[,{1},{2}[,{3},{4}]]]
+ *        where 'R' is the response start character, and inclusion of further bytes depends on case.
  *        {X} is one of:
- *          'B' brewing now (no 3rd and 4th bytes)
- *          'T' off (no 3rd and 4th bytes)
+ *          'B' brewing now
+ *          'T' off
  *          'D' pot is off but a delay to start brewing is counting down and has
  *              [{1},{2}] read as a uint16_t interpreted as "seconds left till brewing"
  *          'W'  pot is brewing but will turn off in n seconds, with n read as in case for 'D'.
+ *          'C' with 1, 2, 3, 4 as in command for 'C'
+ *          'R' started with 'C' but devolved to warming. Sends 2 more bytes, the remaining time.
  */
 void processClientData(WiFiClient client) {
 //  while(client.available()) {
@@ -139,7 +145,7 @@ void processClientData(WiFiClient client) {
         Serial.println(byte1);
         Serial.print("byte2 ");
         Serial.println(byte2);
-        uint16_t timerSeconds = parseSecondsFromNetworkData(byte1, byte2);
+        size_t timerSeconds = parseSecondsFromNetworkData(byte1, byte2);
 
         transition(c1 == 'D' ? STATE_DELAYING : STATE_WARMING, timerSeconds);
         client.write('K');
@@ -154,10 +160,10 @@ void processClientData(WiFiClient client) {
         }
 
         client.read(); // throw away the message identifier
-        uint16_t firstTimerSeconds = parseSecondsFromNetworkData(client.read(), client.read());
-        uint16_t secondTimerSeconds = parseSecondsFromNetworkData(client.read(), client.read());
+        uint16_t schedBrewTimerSecs = parseSecondsFromNetworkData(client.read(), client.read());
+        schedWarmTimerSecs = parseSecondsFromNetworkData(client.read(), client.read());
         
-        transition(STATE_FULL_SCHEDULE, firstTimerSeconds, secondTimerSeconds);
+        transition(STATE_SCHEDULED_WAITING, schedBrewTimerSecs, schedWarmTimerSecs);
         client.write('K');
 
         break;
@@ -167,13 +173,23 @@ void processClientData(WiFiClient client) {
         client.read();
         char stateMessage = potState == STATE_OFF ? 'T' :
                             potState == STATE_BREWING ? 'B' :
-                            potState == STATE_DELAYING ? 'D' : 'W';
+                            potState == STATE_DELAYING ? 'D' : 
+                            potState == STATE_WARMING ? 'W' :
+                            potState == STATE_SCHEDULED_WAITING ? 'C' : 
+                            potState == STATE_SCHEDULED_BREWING ? 'R' : 'E';
         client.write(stateMessage);
-        if (potState == STATE_DELAYING || potState == STATE_WARMING) {
-          unsigned long ticksUntil = timer.ticks() / 1000;
+        if (potState == STATE_DELAYING || potState == STATE_WARMING || potState == STATE_SCHEDULED_BREWING) {
+          unsigned long secsUntil = timer.ticks() / 1000;
           
-          client.write(bigByteOfSeconds(ticksUntil));
-          client.write(smallByteOfSeconds(ticksUntil));
+          client.write(bigByteOfSeconds(secsUntil));
+          client.write(smallByteOfSeconds(secsUntil));
+        } else if (potState == STATE_SCHEDULED_WAITING) {
+          uint16_t secsUntilBrew = timer.ticks() / 1000;
+
+          client.write(bigByteOfSeconds(secsUntilBrew));
+          client.write(smallByteOfSeconds(secsUntilBrew));
+          client.write(bigByteOfSeconds(schedWarmTimerSecs));
+          client.write(smallByteOfSeconds(schedWarmTimerSecs));
         }
         break;
       }
@@ -184,8 +200,8 @@ void processClientData(WiFiClient client) {
   }
 }
 
-uint16_t parseSecondsFromNetworkData(char a, char b) {
-  uint16_t r = a;
+size_t parseSecondsFromNetworkData(char a, char b) {
+  size_t r = a;
   r = (r << 8) | b;
   Serial.print("parsedData: ");
   Serial.println(r);
@@ -196,23 +212,23 @@ uint16_t parseSecondsFromNetworkData(char a, char b) {
  * bigByteOfSeconds and smallByteOfSeconds accept the number of ticks in milliseconds,
  * from the timer, until the next event.
  */
-char bigByteOfSeconds(unsigned long ticksUntil) {
-  return (ticksUntil & 0xFF00) >> 8;
+char bigByteOfSeconds(uint16_t secsUntil) {
+  return (secsUntil & 0xFF00) >> 8;
 }
 
 /*
  * bigByteOfSeconds and smallByteOfSeconds accept the number of ticks in milliseconds,
  * from the timer, until the next event.
  */
-char smallByteOfSeconds(unsigned long ticksUntil) {
-  return ticksUntil & 0xFF;
+char smallByteOfSeconds(uint16_t secsUntil) {
+  return secsUntil & 0xFF;
 }
 
 void transition(int newState) {
   transition(newState, 0);
 }
 
-void transition(int newState, uint16_t timerSeconds) {
+void transition(int newState, size_t timerSeconds) {
   if (newState == STATE_DELAYING) {
     transition(newState, timerSeconds, 0);
     return;
@@ -227,9 +243,7 @@ void transition(int newState, uint16_t timerSeconds) {
 void transition(int newState, uint16_t brewTimerSeconds, uint16_t warmTimerSeconds) {  
   Serial.print("Switching to state: ");
   
-  if (potState == STATE_DELAYING || potState == STATE_WARMING) {
-    timer.cancel();
-  }
+  timer.cancel();
 
   switch (newState) {
     case STATE_BREWING:
@@ -262,15 +276,26 @@ void transition(int newState, uint16_t brewTimerSeconds, uint16_t warmTimerSecon
         return false;
       });
       break;
-    case STATE_FULL_SCHEDULE:
-      Serial.print("Fullschedule, timers ");
+    case STATE_SCHEDULED_WAITING:
+      Serial.print("Schedule; timers ");
       Serial.print(brewTimerSeconds);
       Serial.print(", ");
-      Serial.print(warmTimerSeconds);
-      timer.in(brewTimerSeconds*1000, [](void* _warmTimerSeconds) -> bool {
-        transition(STATE_WARMING, *((uint16_t*)_warmTimerSeconds));
+      Serial.println(warmTimerSeconds);
+      turnPotOff();
+      timer.in(brewTimerSeconds*1000, [](void*) -> bool {
+        Serial.println("Switching to state: Scheduled Brewing");
+        potState = STATE_SCHEDULED_BREWING;
+        turnPotOn();
         return false;
-      }, (void *)warmTimerSeconds);
+      });
+      
+      timer.in((brewTimerSeconds+warmTimerSeconds)*1000, [](void*) -> bool {
+        Serial.println("Switching to state: Off");
+        potState = STATE_OFF;
+        turnPotOff();
+        timer.cancel();
+        return false;
+      });
   }
   
   potState = newState;
