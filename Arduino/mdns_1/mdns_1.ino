@@ -12,7 +12,10 @@
 // the function to connect
 #define WIFI_CONNECTION_WAIT 1000
 
-#define POT_RELAY_PIN 10
+#define POWER_LED_PIN 7
+#define WIFI_LED_PIN 8
+#define RELAY_LED_PIN 9
+#define RELAY_THROW_PIN 10
 
 #define STATE_OFF               0
 #define STATE_BREWING           1
@@ -39,14 +42,25 @@ uint16_t schedWarmTimerSecs = 0;
 
 void setup() {
   // put your setup code here, to run once:
-  pinMode(POT_RELAY_PIN, OUTPUT);
   Serial.begin(9600);
+
+  pinMode(POWER_LED_PIN, OUTPUT);
+  pinMode(WIFI_LED_PIN, OUTPUT);
+  pinMode(RELAY_LED_PIN, OUTPUT);
+  pinMode(RELAY_THROW_PIN, OUTPUT);
+
+  digitalWrite(POWER_LED_PIN, HIGH);
+  digitalWrite(WIFI_LED_PIN, LOW);
+  digitalWrite(RELAY_LED_PIN, LOW);
+  digitalWrite(RELAY_THROW_PIN, LOW);
 }
 
 void loop() {
   // maintenance tasks
   mdns.run();
   timer.tick();
+
+  digitalWrite(WIFI_LED_PIN, WiFi.status() == WL_CONNECTED ? HIGH : LOW);
 
   /*
    * The following code implements a state machine. It will attempt to do
@@ -302,11 +316,13 @@ void transition(int newState, uint16_t brewTimerSeconds, uint16_t warmTimerSecon
 }
 
 void turnPotOn() {
-  digitalWrite(POT_RELAY_PIN, HIGH);
+  digitalWrite(RELAY_LED_PIN, HIGH);
+  digitalWrite(RELAY_THROW_PIN, HIGH);
 }
 
 void turnPotOff() {
-  digitalWrite(POT_RELAY_PIN, LOW);
+  digitalWrite(RELAY_LED_PIN, LOW);
+  digitalWrite(RELAY_THROW_PIN, LOW);
 }
 
 void tryConnect() {
