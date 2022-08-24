@@ -56,9 +56,11 @@ void setup() {
 }
 
 void loop() {
+  delay(500);
   // maintenance tasks
   mdns.run();
   timer.tick();
+  Serial.println("loop");
 
   digitalWrite(WIFI_LED_PIN, WiFi.status() == WL_CONNECTED ? HIGH : LOW);
 
@@ -86,9 +88,10 @@ void loop() {
 
   // Now, the WiFi is connected and the server is listening.
 
-  while(client = server.available()) {
+  if (client = server.available()) {
     Serial.println("Processing client data");
     processClientData(client);
+    client.stop();
   }
 }
 
@@ -131,6 +134,7 @@ void processClientData(WiFiClient client) {
   Serial.println(client.available());
   
   if (client.available()) {
+    delay(500);
     char c1 = client.peek();
     Serial.println(c1);
     switch(c1) {
