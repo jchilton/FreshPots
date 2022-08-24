@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="snackbar_display_len_secs">6</integer>
+    <integer name="max_timer_len_secs">36000</integer>
+    <integer name="monitor_interval_duration_ms">10000</integer>
+    <integer name="response_wait_time_ms">1000</integer>
+</resources>

@@ -1,9 +1,13 @@
 <resources>
     <string name="app_name">FreshPots</string>
     <string name="pot_status">Status:</string>
-    <string name="status_scheduled">Scheduled for %d:%d</string>
+    <string name="status_scheduled">Scheduled to brew in %1$s then warm for %2$s</string>
     <string name="status_on">On</string>
     <string name="status_off">Off</string>
     <string name="status_nc">Not connected</string>
-    <string name="status_disconnected">Disconnected</string>
+    <string name="status_delaying">Waiting to brew in %s</string>
+    <string name="status_warming">Warming for another %s</string>
+    <string name="status_unknown">Not connected</string>
+    <string name="timer_len_warning">Coffee pot timers must be 10 hours or less</string>
+    <string name="coffee_pot_protocol_mdns_name">_johnscoffeepot._tcp</string>
 </resources>

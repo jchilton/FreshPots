@@ -3,4 +3,5 @@
     <dimen name="std_margin">20dp</dimen>
     <dimen name="small_margin">8dp</dimen>
     <dimen name="image_frame_size">2dp</dimen>
+    <dimen name="fab_margin">16dp</dimen>
 </resources>
