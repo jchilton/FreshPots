@@ -1,0 +1,9 @@
+WiFi Coffee Pot, published at
+https://github.com/jchilton/FreshPots
+and at
+https://johnchilton.me/coffee-pot
+by John Chilton
+
+is marked with CC0 1.0.
+
+To view a copy of this license, visit http://creativecommons.org/publicdomain/zero/1.0
